@@ -2,16 +2,16 @@
 /**
  * 작성자: 장현진
  * 작성일: 2026-08-27 (목)
- * 프로그램 설명: 과제 5 메뉴와 공통 온도 단위 설정 및 현재 View를 출력
+ * 프로그램 설명: 과제 6 메뉴와 공통 온도 단위 설정 및 현재 View를 출력
  */
 import { RouterLink, RouterView } from 'vue-router'
-import UnitToggler from './assignments/05-weather-store/components/UnitToggler.vue'
+import UnitToggler from './assignments/06-weather-axios/components/UnitToggler.vue'
 </script>
 
 <template>
   <div class="app-shell">
     <header>
-      <h1>🌦️ 과제 5: 날씨 Store</h1>
+      <h1>🌦️ 과제 6: 날씨 Axios</h1>
       <nav aria-label="주요 메뉴">
         <RouterLink to="/">🌦️ 날씨 대시보드</RouterLink>
         <RouterLink to="/favorites">⭐ 즐겨찾기 도시</RouterLink>
