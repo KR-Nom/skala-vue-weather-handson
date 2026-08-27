@@ -277,7 +277,44 @@ watch(favoriteCityIds, (newIds, oldIds) => {
 10. 개인 기능으로 즐겨찾기 상태, computed, watcher를 구현했다.
 11. 즐겨찾기 버튼과 목록을 화면에 연결했다.
 
-## 11. 트러블슈팅을 통해 배운 점
+## 11. 트러블슈팅 (실제로 겪은 문제)
+
+### 복사한 화면에서 검색어가 입력돼도 표시되지 않음
+
+- 원인: input은 `searchQuery`를 사용했지만 출력 부분에는 과제 1의 `text`가 남아 있었다.
+- 해결: 입력과 출력이 같은 `searchQuery`를 바라보도록 변수명을 통일했다.
+
+### `selectedCityInfo.name`이 화면에 나오지 않음
+
+- 원인: 변수 이름은 도시 정보 객체처럼 만들었지만 실제로는 `weather.name` 문자열만 저장했다.
+- 해결: `selectedCityInfo.value = { ...weather }`로 도시 객체를 얕은 복사해 저장했다.
+
+### 검색 조건을 작성했는데 모든 카드가 나오거나 하나도 나오지 않음
+
+- 원인: `weatherList`와 `weatherList.value`, `searchQuery`와 `searchQuery.value`를 script 안에서 구분하지 못했다.
+- 해결: script의 computed 안에서는 ref에 `.value`를 붙이고, template에서는 `.value` 없이 사용했다.
+
+### computed를 만들었는데 화면에서 검색 결과가 바뀌지 않음
+
+- 원인: `filter()` 결과를 반환하지 않거나 `filteredWeatherList()`처럼 일반 함수로 호출했다.
+- 해결: computed callback에서 배열을 `return`하고 template에서는 `filteredWeatherList`로 반복했다.
+
+### count 같은 값을 바꿨는데 computed의 console이 다시 찍히지 않음
+
+- 원인: computed는 자신이 읽는 반응형 값이 변경되고, 계산 결과가 실제로 다시 필요할 때 실행된다. 관련 없는 상태를 변경하면 재실행되지 않는다.
+- 해결: 어떤 값을 감시하려는지 먼저 구분하고, 단순 실행 확인은 일반 함수나 `watch`를 사용했다.
+
+### watch 첫 실행에서 이전 도시 이름을 읽다가 오류가 남
+
+- 원인: 첫 선택 전의 `oldCity`는 `null`인데 바로 `oldCity.name`에 접근했다.
+- 해결: `oldCity?.name ?? '선택 없음'`으로 값이 없는 경우를 처리했다.
+
+### 즐겨찾기를 눌렀는데 카드 선택도 함께 변경됨
+
+- 원인: 과제 1의 상세보기 버튼과 같은 이벤트 버블링 문제였다.
+- 해결: 즐겨찾기 버튼에도 `.stop`을 적용했다.
+
+### 트러블슈팅을 통해 배운 점
 
 - 파일을 복사하면 이전 변수 이름이 남아 있는지 확인해야 한다.
 - 변수 이름과 실제 저장하는 데이터의 역할이 일치해야 한다.

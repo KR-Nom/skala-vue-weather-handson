@@ -1,289 +1,331 @@
-# 날씨 Mockup HandsOn 작업 기록
+# 과제 2: 날씨 Composition
+
+작성일: 2026-08-25 (화)
 
 ## 작업 목적
 
-Vue 수업에서 배운 `ref`, `v-for`, `v-if`, `v-model`, 이벤트 처리를 한 화면에서 직접 사용하기 위해 날씨 Mockup을 만들었다.
+과제 1에서 만든 `WeatherMockup.vue`를 복사하여 `WeatherComposition.vue`를 만들고, 기존 UI를 유지하면서 Composition API의 `computed`, `watch`, `watchEffect`를 단계적으로 적용했다.
 
-완성 코드를 한 번에 작성한 것이 아니라 화면 뼈대를 먼저 만든 뒤 데이터 출력, 조건 처리, 입력값 연결, 클릭 이벤트 순서로 기능을 추가했다. 이후 화면을 직접 확인하며 변수 오타, 이벤트 충돌, 반복 위치, 화면 크기와 CSS 우선순위 문제를 해결했다.
+이번 과제에서는 완전히 새로운 화면을 만드는 것보다 지금까지 작성한 다음 예제들을 조합하는 방식을 사용했다.
 
-## 1. 화면 뼈대 만들기
+- `ReactiveRef.vue`: `ref()` 상태 선언
+- `ComputedBasic.vue`: `computed()` 선언과 캐싱
+- `WatchersBasic.vue`: 단일 반응형 값 `watch()` 감시
+- `WeatherMockup.vue`: 날씨 카드, 조건부 렌더링, 클릭 이벤트
 
-처음에는 `WeatherMockup.vue`에 제목, 도시 검색 input, 입력값 확인 영역, 지역별 날씨 목록을 넣을 빈 `<ul>`과 `<li>`를 만들었다.
+---
+
+## 1. Mockup을 복사해 새 컴포넌트 만들기
+
+과제 1 결과를 보존하고 비교하기 위해 기존 파일을 직접 변경하지 않고 새 컴포넌트로 분리했다.
+
+```text
+HandsOn/
+├── WeatherMockup.vue
+└── WeatherComposition.vue
+```
+
+복사 후 화면 제목을 `과제 2: 날씨 (컴포지션)`으로 변경하고 `App.vue`에서 새 컴포넌트를 불러왔다.
+
+이 방식의 장점은 과제 2에서 오류가 발생했을 때 과제 1의 동작과 코드를 바로 비교할 수 있다는 점이다.
+
+---
+
+## 2. Mockup의 날씨 데이터 재사용하기
+
+도시 데이터 8개 추가는 과제 1의 `WeatherMockup.vue`에서 마지막에 완료했다. 과제 2에서는 해당 배열과 카드 UI를 함께 복사해 사용하고, 데이터 자체보다 Composition API를 적용하는 데 집중했다.
+
+따라서 두 컴포넌트는 같은 `{ id, name, temp, status }` 구조와 도시 8개를 사용하며, 검색·감시·즐겨찾기 기능의 유무로 차이를 구분한다.
+
+---
+
+## 3. 복사 후 남은 변수 이름 문제
+
+검색 input은 새 변수인 `searchQuery`와 연결했지만 출력 영역에는 과제 1의 `text`가 남아 있었다.
 
 ```html
-<h3>도시 검색</h3>
-<input type="text" placeholder="검색할 도시 이름 입력" />
+<!-- 잘못 남아 있던 코드 -->
+<input v-model="searchQuery" />
+<strong>{{ text }}</strong>
+```
 
-<h3>지역별 날씨 현황</h3>
-<ul>
-  <li></li>
+`text`는 새 컴포넌트에 선언되지 않았으므로 input과 출력에서 같은 상태를 사용하도록 수정했다.
+
+```html
+<input v-model="searchQuery" />
+<strong>{{ searchQuery }}</strong>
+```
+
+파일을 복사해 확장할 때는 화면 구조뿐 아니라 이전 변수 이름이 남아 있는지도 확인해야 한다는 점을 알게 됐다.
+
+---
+
+## 4. 선택 도시를 객체로 저장하고 얕은 복사하기
+
+처음에는 `selectedCityInfo`라는 이름을 사용하면서 실제 값은 `weather.name` 문자열만 저장했다.
+
+```html
+@click="selectedCityInfo = weather.name"
+```
+
+변수의 역할이 선택 도시의 전체 정보이므로 도시 객체를 저장하도록 변경했다. 원본 날씨 객체와 선택 상태가 같은 참조를 공유하지 않도록 spread 문법으로 얕은 복사했다.
+
+```js
+const selectCity = (weather) => {
+  selectedCityInfo.value = { ...weather }
+}
+```
+
+```html
+<li @click="selectCity(weather)">
+```
+
+현재 날씨 객체의 속성은 문자열과 숫자뿐이므로 깊은 복사까지는 필요하지 않았다.
+
+선택 문구에서는 객체의 `name`을 사용했다.
+
+```html
+{{ selectedCityInfo.name }}이 선택되었습니다.
+```
+
+---
+
+## 5. 먼저 `v-for + v-if`로 검색 원리 확인하기
+
+검색 기능을 처음부터 JavaScript `filter()`로 완성하지 않고, 이미 학습한 `v-for`와 `v-if`로 먼저 동작을 확인했다.
+
+```html
+<template v-for="weather in weatherList" :key="weather.id">
+  <li v-if="searchQuery === '' || weather.name.includes(searchQuery)">
+    <!-- 날씨 카드 -->
+  </li>
+</template>
+```
+
+처리 순서는 다음과 같았다.
+
+1. `v-for`가 도시 8개를 순회한다.
+2. 검색어가 비어 있으면 모든 도시를 표시한다.
+3. 검색어가 있으면 도시 이름에 포함된 경우만 표시한다.
+
+같은 요소에 `v-for`와 `v-if`를 함께 붙이지 않고 바깥쪽 `<template>`에 `v-for`를 배치했다.
+
+---
+
+## 6. 검색 로직을 computed로 이동하기
+
+템플릿에서 검색 원리를 확인한 뒤 과제 요구사항에 맞게 검색 결과를 `filteredWeatherList` computed로 옮겼다.
+
+```js
+const filteredWeatherList = computed(() => {
+  if (searchQuery.value === '') {
+    return weatherList.value
+  }
+
+  return weatherList.value.filter((weather) =>
+    weather.name.includes(searchQuery.value),
+  )
+})
+```
+
+템플릿은 계산 방법을 알 필요 없이 computed 결과만 반복한다.
+
+```html
+<li v-for="weather in filteredWeatherList" :key="weather.id">
+```
+
+이 과정을 통해 역할을 다음처럼 나눴다.
+
+```text
+script의 computed: 어떤 도시를 보여줄지 계산
+template의 v-for: 계산된 도시를 화면에 반복 출력
+```
+
+검색 결과가 없으면 배열 길이가 `0`이 되므로 `v-if`, `v-else`로 안내 문구를 표시했다.
+
+```html
+<ul v-if="filteredWeatherList.length > 0">
+  <!-- 검색된 카드 -->
 </ul>
+<p v-else>검색 결과와 일치하는 도시가 없습니다.</p>
 ```
 
-한 번에 모든 기능을 넣기보다 필요한 화면 영역을 먼저 나누고 각 영역에 Vue 문법을 하나씩 연결하는 방식으로 진행했다.
+---
 
-## 2. 날씨 데이터 준비하기
+## 7. 선택 도시를 watch로 감시하기
 
-`script setup`에서 Vue의 `ref`를 불러오고 날씨 배열을 만들었다.
+`selectedCityInfo`의 이전 값과 현재 값을 비교하기 위해 `watch`를 사용했다.
 
 ```js
-import { ref } from 'vue'
+watch(selectedCityInfo, (newCity, oldCity) => {
+  const oldCityName = oldCity?.name ?? '선택 없음'
 
-const weatherList = ref([
-  { id: 'city_01', name: '서울', temp: 28, status: '맑음' },
-  { id: 'city_02', name: '부산', temp: 24, status: '비' },
-  { id: 'city_03', name: '수원', temp: 26, status: '구름' },
-])
+  console.log(
+    `[watch 감지] 선택 도시 변경: ${oldCityName} → ${newCity.name}`,
+  )
+})
 ```
 
-- `id`: Vue가 각 카드를 구분할 때 사용하는 고유값
-- `name`: 도시 이름
-- `temp`: 기온 조건을 판단할 값
-- `status`: 상세보기 alert에 표시할 날씨 상태
+첫 선택에서는 이전 값이 `null`이므로 optional chaining과 null 병합 연산자로 `선택 없음`을 표시했다.
 
-처음에는 데이터와 상세보기 함수를 주석으로 준비해 두고, 기본 화면을 확인한 뒤 주석을 해제하면서 연결했다.
-
-## 3. `v-for`로 카드 반복 출력하기
-
-도시마다 `<li>`를 직접 작성하지 않고 `v-for`로 배열을 반복했다.
-
-```html
-<li v-for="weather in weatherList" :key="weather.id"></li>
+```text
+선택 없음 → 서울
+서울 → 부산
 ```
 
-`weather`는 반복할 때마다 현재 도시 객체 하나를 가리킨다. 카드 안에서는 `weather.name`, `weather.temp`, `weather.status`로 값을 꺼냈다.
+선택 객체를 매번 얕은 복사하므로 같은 도시를 다시 클릭해도 새로운 객체가 할당되어 watch가 실행된다.
 
-### 당시 수정 과정: 날씨 값이 제대로 나오지 않음
+---
 
-반복 변수는 `weather`로 선언했지만 출력 부분에 `wheather`라고 적은 오타가 있었다.
+## 8. 검색 상태를 watchEffect로 감시하기
 
-```html
-<!-- 잘못 작성한 코드 -->
-<strong>{{ wheather.name }}</strong>
-<p>{{ wheather.temp }}</p>
-```
-
-`weather`와 `wheather`는 서로 다른 변수이므로 선언되지 않은 값을 찾게 된다. 반복문에서 선언한 이름과 똑같이 수정해 해결했다.
-
-```html
-<strong>{{ weather.name }}</strong>
-<p>{{ weather.temp }}</p>
-```
-
-이 과정에서 `v-for`의 반복 변수 이름은 내부에서도 철자를 정확히 맞춰야 한다는 점을 확인했다.
-
-## 4. 기온에 따라 상태 나누기
-
-현재 기온이 25도 이상인지 확인하여 더움과 선선함 중 하나만 출력했다.
-
-```html
-<span v-if="weather.temp >= 25" class="weather-label hot"> 🔥 더움 (25도 이상) </span>
-<span v-else class="weather-label cool"> ❄️ 선선함 (25도 미만) </span>
-```
-
-처리 순서는 다음과 같다.
-
-1. 현재 카드의 `weather.temp`를 확인한다.
-2. 25 이상이면 `v-if`의 더움 문구를 보여준다.
-3. 25 미만이면 `v-else`의 선선함 문구를 보여준다.
-
-### 당시 수정 과정: 선선함도 빨간 배경으로 표시됨
-
-처음에는 각 `span`에 inline style을 직접 작성했다. 선선함 글자는 파란색이었지만 배경은 더움과 같은 빨간 계열이라 상태 구분이 잘되지 않았다.
-
-그래서 공통 스타일과 상태별 스타일을 분리했다.
-
-```css
-.weather-label.hot {
-  color: #ffffff;
-  background: #ff6572;
-}
-
-.weather-label.cool {
-  color: #ffffff;
-  background: #45b9ef;
-}
-```
-
-조건 판단은 `v-if`가 담당하고, 색상 표현은 CSS 클래스가 담당하도록 역할을 나눴다.
-
-## 5. 검색 input과 값 연결하기
-
-검색어를 저장할 `text`를 만들고 input에 `v-model`을 연결했다.
+`watchEffect`에서는 검색어와 computed 검색 결과를 직접 사용했다.
 
 ```js
-const text = ref('')
+watchEffect(() => {
+  const cityNames = filteredWeatherList.value
+    .map((weather) => weather.name)
+    .join(', ')
+
+  console.log(
+    `[watchEffect 자동 호출] 현재 검색어 "${searchQuery.value}"의 검색 결과: ${filteredWeatherList.value.length}개 (${cityNames || '검색 결과 없음'})`,
+  )
+})
 ```
 
-```html
-<input v-model="text" type="text" placeholder="검색할 도시 이름 입력" />
+`watchEffect`는 내부에서 읽은 `searchQuery`와 `filteredWeatherList`를 자동으로 추적한다. 컴포넌트가 처음 실행될 때 한 번 호출되고 검색어가 변경될 때 다시 실행된다.
 
-<h3>검색 중인 도시: <strong>{{ text }}</strong></h3>
-```
+### watch와 watchEffect 역할 구분
 
-별도의 입력 이벤트 함수를 만들지 않아도 사용자가 한글 도시 이름을 입력하면 `text`가 갱신되고 화면의 `{{ text }}`도 바로 바뀐다.
+| 기능 | 사용한 API | 선택 이유 |
+| --- | --- | --- |
+| 선택 도시 변경 | `watch` | 이전 도시와 현재 도시를 비교해야 함 |
+| 검색 상태 변경 | `watchEffect` | 내부에서 사용하는 검색어와 결과를 자동 추적 |
 
-## 6. 카드 클릭으로 도시 선택하기
+선택 도시를 `watchEffect`로 감시할 수도 있지만 이전 값을 인자로 받을 수 없으므로 `서울 → 부산` 같은 변경 과정을 바로 표현하기 어렵다.
 
-선택된 도시를 기억하기 위해 `selectedCity`를 만들었다.
+---
+
+## 9. 개인 기능으로 즐겨찾기 추가하기
+
+과제의 개인 반응형 상태·computed·watcher 요구사항을 즐겨찾기 기능으로 구현했다.
+
+### 반응형 상태
+
+원본 도시 객체를 중복 저장하지 않고 도시 ID만 저장한다.
 
 ```js
-const selectedCity = ref('')
+const favoriteCityIds = ref([])
 ```
 
-각 카드에 클릭 이벤트를 연결해 현재 도시 이름을 저장했다.
+### 추가와 제거
 
-```html
-<li v-for="weather in weatherList" :key="weather.id" @click="selectedCity = weather.name"></li>
-```
-
-클릭 전에는 기본 안내를 보여주고, 클릭 후에는 선택된 도시를 보여주도록 나눴다.
-
-```html
-<p v-if="selectedCity" class="selected-message">{{ selectedCity }}이 선택되었습니다.</p>
-<span v-else class="selected-message"> 카드를 클릭하거나 검색해 보세요. </span>
-```
-
-### 당시 수정 과정: 선택 문구가 카드마다 반복됨
-
-처음에는 `selected-message`를 `v-for`가 적용된 `<li>` 내부에 넣었다. `v-for` 내부의 요소는 배열 개수만큼 반복되므로 선택 결과도 각 카드 안에 나타날 수 있었다.
-
-선택 결과는 개별 카드 내용이 아니라 전체 목록의 결과이므로 `</ul>` 아래로 이동했다.
-
-```html
-</ul>
-<p class="selected-message">선택 결과</p>
-```
-
-이 과정에서 반복되어야 하는 카드 내용과 한 번만 나와야 하는 전체 결과의 위치를 구분했다.
-
-## 7. 상세보기 alert 만들기
-
-상세보기 버튼을 누르면 현재 카드의 도시 이름과 날씨 상태가 나오도록 함수를 작성했다.
+현재 ID가 있으면 `filter()`로 제거하고, 없으면 spread로 새 배열에 추가한다.
 
 ```js
-const showDetail = (cityName, status) => {
-  window.alert(`${cityName}의 현재 날씨는 [${status}] 상태입니다.`)
+const toggleFavorite = (weather) => {
+  const isFavorite = favoriteCityIds.value.includes(weather.id)
+
+  if (isFavorite) {
+    favoriteCityIds.value = favoriteCityIds.value.filter(
+      (cityId) => cityId !== weather.id,
+    )
+    return
+  }
+
+  favoriteCityIds.value = [...favoriteCityIds.value, weather.id]
 }
 ```
 
-버튼에서는 현재 반복 중인 `weather`의 값을 함수에 전달했다.
+`push()`로 기존 배열을 직접 변경하지 않고 매번 새 배열을 할당했다. 이 방식은 watch에서 이전 배열과 현재 배열을 비교하기 쉽다.
 
-```html
-<button @click.stop="showDetail(weather.name, weather.status)">상세보기</button>
+### computed
+
+저장된 ID를 원본 도시 객체와 연결한다.
+
+```js
+const favoriteWeatherList = computed(() => {
+  return weatherList.value.filter((weather) =>
+    favoriteCityIds.value.includes(weather.id),
+  )
+})
 ```
 
-### 당시 수정 과정: 버튼과 카드 클릭이 함께 실행됨
+### watcher
 
-상세보기 버튼은 클릭 이벤트가 있는 `<li>` 내부에 있다. `.stop`이 없으면 버튼을 클릭했을 때 이벤트가 부모 카드까지 전달된다.
-
-그 결과 한 번의 클릭으로 alert와 도시 선택이 함께 실행될 수 있다. 이 현상을 이벤트 버블링이라고 하며, 두 역할을 분리하기 위해 `@click.stop`을 사용했다.
-
-- 카드 클릭: `selectedCity` 변경
-- 상세보기 클릭: alert만 실행
-
-## 8. 화면이 너무 좁게 보이는 문제 해결하기
-
-기능을 만든 뒤 화면을 확인하니 날씨 Mockup이 모바일 카드처럼 지나치게 좁게 표시됐다.
-
-첫 번째 원인은 컴포넌트에 있던 `max-width: 520px`이었다. 화면이 넓어져도 컴포넌트가 520px 이상 커질 수 없었다.
-
-두 번째 원인은 Vue 기본 `main.css`였다. 큰 화면에서 `#app`이 2열 grid로 설정되어 날씨 컴포넌트가 전체 화면이 아니라 한 칸만 사용하고 있었다.
-
-```css
-#app {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-}
+```js
+watch(favoriteCityIds, (newIds, oldIds) => {
+  console.log(`[즐겨찾기 watch] ${oldIds.length}개 → ${newIds.length}개`)
+})
 ```
 
-컴포넌트 너비만 키우지 않고 부모 `#app`의 레이아웃도 확인해 전체 너비를 사용할 수 있도록 했다. 여백과 글자 크기는 `clamp()`를 사용해 화면 크기에 따라 최소값과 최대값 사이에서 변하게 했다.
+즐겨찾기 버튼에는 `.stop`을 적용해 카드 선택 이벤트가 함께 실행되지 않도록 했다.
 
-```css
-font-size: clamp(20px, 2.2vw, 28px);
-```
+---
 
-이 문제를 통해 자식 컴포넌트가 작게 보이면 해당 요소뿐 아니라 부모의 `width`, `max-width`, `grid` 설정도 함께 확인해야 한다는 점을 배웠다.
+## 10. 실제 구현 순서
 
-## 9. 선택 메시지 글자가 계속 작은 문제 해결하기
+1. `WeatherMockup.vue`를 복사해 `WeatherComposition.vue`를 만들었다.
+2. Mockup에서 완성한 도시 데이터 8개를 그대로 재사용했다.
+3. 복사 후 남은 `text` 변수를 `searchQuery`로 수정했다.
+4. `selectedCityInfo`에 이름 대신 도시 객체의 얕은 복사본을 저장했다.
+5. `v-for + v-if`로 검색 원리를 먼저 확인했다.
+6. 검색 로직을 `filteredWeatherList` computed로 이동했다.
+7. 검색 결과가 없을 때 안내 문구를 추가했다.
+8. `watch`로 선택 도시의 이전 값과 현재 값을 감시했다.
+9. `watchEffect`로 검색어와 검색 결과를 자동 추적했다.
+10. 개인 기능으로 즐겨찾기 상태, computed, watcher를 구현했다.
+11. 즐겨찾기 버튼과 목록을 화면에 연결했다.
 
-선택 메시지의 글자 크기를 키웠지만, 도시를 선택한 뒤 나오는 `선택되었습니다` 문구는 계속 작게 표시됐다.
+## 11. 트러블슈팅 (실제로 겪은 문제)
 
-원인은 기존 CSS 선택자였다.
+### 복사한 화면에서 검색어가 입력돼도 표시되지 않음
 
-```css
-.handson-section > p {
-  font-size: 13px;
-}
-```
+- 원인: input은 `searchQuery`를 사용했지만 출력 부분에는 과제 1의 `text`가 남아 있었다.
+- 해결: 입력과 출력이 같은 `searchQuery`를 바라보도록 변수명을 통일했다.
 
-선택 후 메시지가 `<p class="selected-message">`였기 때문에 위 규칙의 영향을 받았다. 단순한 `.selected-message`보다 `.handson-section > p`의 우선순위가 높았다.
+### `selectedCityInfo.name`이 화면에 나오지 않음
 
-선택 메시지를 더 구체적으로 지정해 해결했다.
+- 원인: 변수 이름은 도시 정보 객체처럼 만들었지만 실제로는 `weather.name` 문자열만 저장했다.
+- 해결: `selectedCityInfo.value = { ...weather }`로 도시 객체를 얕은 복사해 저장했다.
 
-```css
-.handson-section > .selected-message {
-  font-size: clamp(16px, 1.5vw, 19px);
-}
-```
+### 검색 조건을 작성했는데 모든 카드가 나오거나 하나도 나오지 않음
 
-이 과정에서 CSS는 아래쪽에 작성했다고 무조건 적용되는 것이 아니라 선택자의 구체성과 우선순위도 확인해야 한다는 점을 알게 됐다.
+- 원인: `weatherList`와 `weatherList.value`, `searchQuery`와 `searchQuery.value`를 script 안에서 구분하지 못했다.
+- 해결: script의 computed 안에서는 ref에 `.value`를 붙이고, template에서는 `.value` 없이 사용했다.
 
-## 10. 전체 구현 순서
+### computed를 만들었는데 화면에서 검색 결과가 바뀌지 않음
 
-1. 제목, 검색창, 목록 영역으로 화면 뼈대를 만들었다.
-2. `ref`로 날씨 데이터 배열을 선언했다.
-3. `v-for`와 `:key`로 도시 카드를 반복 출력했다.
-4. 반복 변수의 `wheather` 오타를 찾아 `weather`로 수정했다.
-5. `v-if`, `v-else`로 기온 상태를 나눴다.
-6. `v-model`로 검색어를 실시간 출력했다.
-7. `selectedCity`를 만들고 카드 클릭 이벤트를 연결했다.
-8. 선택 안내 문구를 반복문 바깥으로 이동했다.
-9. 상세보기 함수에 도시 이름과 상태를 전달했다.
-10. `.stop`으로 버튼과 카드의 클릭 동작을 분리했다.
-11. 더움과 선선함 라벨의 색상을 분리했다.
-12. 부모 레이아웃과 컴포넌트 너비를 확인해 반응형으로 조정했다.
-13. CSS 우선순위 문제를 찾아 선택 안내 글자 크기를 수정했다.
+- 원인: `filter()` 결과를 반환하지 않거나 `filteredWeatherList()`처럼 일반 함수로 호출했다.
+- 해결: computed callback에서 배열을 `return`하고 template에서는 `filteredWeatherList`로 반복했다.
 
-## 이번 실습에서 배운 점
+### count 같은 값을 바꿨는데 computed의 console이 다시 찍히지 않음
 
-- Vue 템플릿의 변수 이름은 `script`에서 선언한 이름과 정확히 같아야 한다.
-- `v-for` 내부 요소는 데이터 개수만큼 모두 반복된다.
-- 전체 목록의 결과는 반복문 바깥에 두어야 한 번만 출력된다.
-- `v-model`로 input과 반응형 값을 연결할 수 있다.
-- 중첩된 클릭 요소에서는 이벤트 버블링을 고려해야 한다.
-- `.stop`으로 부모에 전달되는 클릭 이벤트를 막을 수 있다.
-- 화면 크기 문제는 컴포넌트와 부모 레이아웃을 함께 확인해야 한다.
-- CSS가 예상대로 적용되지 않으면 선택자 우선순위를 확인해야 한다.
+- 원인: computed는 자신이 읽는 반응형 값이 변경되고, 계산 결과가 실제로 다시 필요할 때 실행된다. 관련 없는 상태를 변경하면 재실행되지 않는다.
+- 해결: 어떤 값을 감시하려는지 먼저 구분하고, 단순 실행 확인은 일반 함수나 `watch`를 사용했다.
 
-## 트러블슈팅 (실제로 겪은 문제)
+### watch 첫 실행에서 이전 도시 이름을 읽다가 오류가 남
 
-### `weatherList`에서 첫 번째 도시만 보이거나 값이 출력되지 않음
+- 원인: 첫 선택 전의 `oldCity`는 `null`인데 바로 `oldCity.name`에 접근했다.
+- 해결: `oldCity?.name ?? '선택 없음'`으로 값이 없는 경우를 처리했다.
 
-- 원인: `v-for`가 반복되는 요소의 위치와 닫는 태그를 제대로 맞추지 못했고, 반복 변수 `weather`를 `wheather`로 잘못 작성했다.
-- 확인: 배열에는 3개 이상 들어 있는데 화면에는 한 카드만 나오거나 콘솔에 변수를 찾을 수 없다는 메시지가 표시됐다.
-- 해결: `<li v-for="weather in weatherList" :key="weather.id">` 구조를 다시 맞추고 카드 내부 변수명을 모두 `weather`로 통일했다.
+### 즐겨찾기를 눌렀는데 카드 선택도 함께 변경됨
 
-### 선선함 라벨도 더움과 같은 색으로 보임
+- 원인: 과제 1의 상세보기 버튼과 같은 이벤트 버블링 문제였다.
+- 해결: 즐겨찾기 버튼에도 `.stop`을 적용했다.
 
-- 원인: 조건문은 정상인데 두 span에 비슷한 inline style을 사용했다.
-- 해결: `hot`, `cool` 클래스를 따로 만들고 선선함은 파란 계열로 분리했다.
+### 트러블슈팅을 통해 배운 점
 
-### 선택 문구가 카드마다 반복됨
+- 파일을 복사하면 이전 변수 이름이 남아 있는지 확인해야 한다.
+- 변수 이름과 실제 저장하는 데이터의 역할이 일치해야 한다.
+- 단순한 객체는 spread를 이용한 얕은 복사로 원본과 선택 상태를 분리할 수 있다.
+- 검색 원리를 템플릿에서 확인한 후 computed로 역할을 옮길 수 있다.
+- computed는 함수처럼 호출하지 않고 반응형 값으로 사용한다.
+- 이전 값과 현재 값이 모두 필요하면 `watch`가 적합하다.
+- 여러 반응형 의존성을 자동 추적하려면 `watchEffect`가 적합하다.
+- `filter()`는 원본을 변경하지 않고 새 배열을 반환하므로 결과를 재할당해야 한다.
+- 자식 버튼의 클릭과 카드 클릭을 분리하려면 `.stop`이 필요하다.
 
-- 원인: 전체 선택 결과를 `v-for`가 적용된 `<li>` 안에 작성했다.
-- 해결: 선택 메시지를 `</ul>` 아래로 옮겨 목록 전체에서 한 번만 렌더링되게 했다.
+## 12. 현재 제한사항
 
-### 상세보기 버튼을 누르면 카드 선택도 함께 실행됨
-
-- 원인: 버튼 클릭 이벤트가 부모 카드까지 전달되는 이벤트 버블링이 발생했다.
-- 해결: 상세보기 버튼에 `@click.stop`을 적용했다.
-
-### 화면 너비와 선택 문구 글자 크기가 바뀌지 않음
-
-- 원인: 컴포넌트의 `max-width`뿐 아니라 기본 `main.css`의 `#app` grid와 더 강한 CSS 선택자가 함께 적용되고 있었다.
-- 해결: 부모 레이아웃까지 확인하고 `.handson-section > .selected-message`처럼 실제 요소에 맞는 선택자를 사용했다.
-
-## 추후 진행
-
-- 기본 예제 외에 개인 날씨 데이터 추가
+즐겨찾기는 Vue의 `ref` 배열에 저장되므로 브라우저를 새로고침하면 초기화된다. 과제 범위에는 영구 저장 요구사항이 없어 `localStorage`는 추가하지 않았다.
