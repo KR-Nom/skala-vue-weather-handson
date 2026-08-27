@@ -1,12 +1,5 @@
 import { ref } from 'vue'
 
-/**
- * 작성자: 장현진
- * 작성일: 2026-08-26 (수)
- * 변경사항: 메인과 즐겨찾기 View가 함께 사용하는 상태를 별도 파일로 분리
- * 프로그램 설명: 8개 도시 데이터와 즐겨찾기 ID 및 변경 함수 관리
- */
-
 // 메인 View와 즐겨찾기 View가 함께 사용하는 날씨 데이터와 선택 상태
 export const weatherList = ref([
   { id: 'city_01', name: '서울', temp: 28, status: '맑음' },
