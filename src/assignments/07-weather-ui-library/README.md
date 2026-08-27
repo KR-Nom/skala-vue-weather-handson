@@ -44,6 +44,12 @@ AI의 도움을 받은 부분
 └── 반복되는 스타일 정리와 빌드 오류 확인
 ```
 
+상세 화면의 날씨 배경 영상은 Pexels에서 무료 제공되는 영상을 웹용 저용량 MP4로 내려받아 로컬 자산으로 사용했다.
+
+- 맑음: [The Rays Of Sun In A Clear Sky](https://www.pexels.com/video/the-rays-of-sun-in-a-clear-sky-2605326/)
+- 흐림: [Blue Sky with Clouds Moving](https://www.pexels.com/video/blue-sky-with-clouds-moving-4496903/)
+- 비: [Time Lapse of Raindrops Falling on a Window Glass](https://www.pexels.com/video/time-lapse-of-raindrops-falling-on-a-window-glass-10651122/)
+
 ## 주요 변경 내용
 
 - 과제 6을 `07-weather-ui-library`로 복사해 이전 버전 보존
@@ -56,6 +62,7 @@ AI의 도움을 받은 부분
 - 상세 화면을 현재 날씨·단기 예보·대기질 패널로 재구성
 - OpenWeather의 `icon` 코드로 도시별 현재 날씨 이미지 출력
 - 맑음·구름·비와 기온을 조합해 카드와 상세 화면의 색상 자동 변경
+- 상세 현재 날씨 카드에 맑음·흐림·비 상태별 반복 배경 영상 적용
 - 서울·부산·수원·인천·대구·대전·광주·제주의 대표 이미지를 로컬 자산으로 추가
 - 대표 도시 사진 위에 API에서 받은 현재 날씨 정보를 함께 표시
 

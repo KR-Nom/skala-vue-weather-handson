@@ -16,6 +16,7 @@ const favoriteWeatherList = computed(() => {
 })
 
 const showDetail = (weather) => router.push(`/weather/${weather.id}`)
+
 </script>
 
 <template>

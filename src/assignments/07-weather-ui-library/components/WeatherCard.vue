@@ -57,6 +57,7 @@ const weatherTheme = computed(() => {
   if (main === 'Clear') return isHot ? 'hot-clear' : 'clear'
   return 'default'
 })
+
 </script>
 
 <template>

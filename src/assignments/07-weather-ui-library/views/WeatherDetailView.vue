@@ -9,6 +9,9 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { fetchCurrentAirQuality } from '../api/airQualityApi'
 import { fetchCurrentWeather, fetchWeatherForecast } from '../api/weatherApi'
+import clearWeatherVideo from '../assets/weather-videos/clear.mp4'
+import cloudsWeatherVideo from '../assets/weather-videos/clouds.mp4'
+import rainWeatherVideo from '../assets/weather-videos/rain.mp4'
 import { useConfigStore } from '../stores/configStore'
 
 const route = useRoute()
@@ -44,11 +47,6 @@ const displayTemp = computed(() => {
   return Math.round(apiWeather.value.main.temp)
 })
 
-const currentWeatherIcon = computed(() => {
-  const icon = apiWeather.value?.weather[0].icon
-  return icon ? `https://openweathermap.org/img/wn/${icon}@4x.png` : ''
-})
-
 const detailWeatherTheme = computed(() => {
   if (!apiWeather.value) return 'default'
 
@@ -59,6 +57,14 @@ const detailWeatherTheme = computed(() => {
   if (main === 'Clouds') return isHot ? 'hot-clouds' : 'clouds'
   if (main === 'Clear') return isHot ? 'hot-clear' : 'clear'
   return 'default'
+})
+
+const currentWeatherVideo = computed(() => {
+  const weatherMain = apiWeather.value?.weather[0].main
+
+  if (['Rain', 'Drizzle', 'Thunderstorm'].includes(weatherMain)) return rainWeatherVideo
+  if (weatherMain === 'Clouds') return cloudsWeatherVideo
+  return clearWeatherVideo
 })
 
 const displayForecastList = computed(() => {
@@ -85,6 +91,11 @@ const airQualityStatus = computed(() => {
   if (aqi <= 200) return '나쁨'
   return '매우 나쁨'
 })
+
+const progressValue = (value, maximum) => Math.min(Math.round((value / maximum) * 100), 100)
+const pm10Progress = computed(() => progressValue(airQuality.value?.current.pm10 ?? 0, 150))
+const pm25Progress = computed(() => progressValue(airQuality.value?.current.pm2_5 ?? 0, 75))
+const aqiProgress = computed(() => progressValue(airQuality.value?.current.us_aqi ?? 0, 300))
 
 const loadWeather = async () => {
   if (!selectedWeather.value) return
@@ -144,8 +155,13 @@ onMounted(() => {
     <el-alert v-else-if="errorMessage" :title="errorMessage" type="error" show-icon :closable="false" />
 
     <el-card v-else-if="selectedWeather && apiWeather" :class="['current-card', detailWeatherTheme]" shadow="never">
+      <div class="weather-video-layer" aria-hidden="true">
+        <video :key="currentWeatherVideo" autoplay muted loop playsinline preload="metadata">
+          <source :src="currentWeatherVideo" type="video/mp4" />
+        </video>
+      </div>
       <div class="current-main">
-        <div class="current-summary"><span>NOW · 현재 날씨</span><div class="temperature-row"><strong>{{ displayTemp }}<small>{{ configStore.unitSymbol }}</small></strong><img :src="currentWeatherIcon" :alt="apiWeather.weather[0].description" /></div><p>{{ apiWeather.weather[0].description }}</p></div>
+        <div class="current-summary"><span>NOW · 현재 날씨</span><div class="temperature-row"><strong>{{ displayTemp }}<small>{{ configStore.unitSymbol }}</small></strong></div><p>{{ apiWeather.weather[0].description }}</p></div>
         <div class="current-metrics">
           <div><span>습도</span><strong>{{ apiWeather.main.humidity }}%</strong></div>
           <div><span>풍속</span><strong>{{ apiWeather.wind.speed }}m/s</strong></div>
@@ -173,14 +189,17 @@ onMounted(() => {
         <p>
           미세먼지 PM10
           <strong>{{ airQuality.current.pm10 }}{{ airQuality.current_units.pm10 }}</strong>
+          <el-progress :percentage="pm10Progress" :show-text="false" :stroke-width="9" color="#40a97b" />
         </p>
         <p>
           초미세먼지 PM2.5
           <strong>{{ airQuality.current.pm2_5 }}{{ airQuality.current_units.pm2_5 }}</strong>
+          <el-progress :percentage="pm25Progress" :show-text="false" :stroke-width="9" color="#3f96c8" />
         </p>
         <p>
           대기질 지수
           <strong>{{ airQuality.current.us_aqi }}</strong>
+          <el-progress :percentage="aqiProgress" :show-text="false" :stroke-width="9" color="#e8a43c" />
           <el-tag type="success">{{ airQualityStatus }}</el-tag>
         </p>
         <small>기준 시각: {{ airQuality.current.time }}</small>
@@ -196,7 +215,7 @@ onMounted(() => {
 .detail-heading span { color: #1688c1; font-size: 12px; font-weight: 800; letter-spacing: 1px; }
 .detail-heading h2 { margin: 4px 0 0; color: #17384b; font-size: clamp(24px, 4vw, 32px); }
 .detail-heading p { margin: 5px 0 0; color: #708895; }
-.current-card { overflow: hidden; border: 1px solid rgba(255,255,255,.55); border-radius: 22px; color: #fff; box-shadow: 0 20px 45px rgba(25,83,114,.2); }
+.current-card { position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,.55); border-radius: 22px; color: #fff; box-shadow: 0 20px 45px rgba(25,83,114,.2); }
 .current-card.default { background: linear-gradient(135deg, #175b78, #2f9d8b); }
 .current-card.clear { background: linear-gradient(135deg, #2787ba, #f2c85c); }
 .current-card.hot-clear { background: linear-gradient(135deg, #e75c32, #f3a62d); }
@@ -205,12 +224,14 @@ onMounted(() => {
 .current-card.rain { background: linear-gradient(135deg, #264e6b, #4f8ca8); }
 .current-card.hot-rain { background: linear-gradient(135deg, #206f76, #c86559); }
 .current-card :deep(.el-card__body) { padding: clamp(24px, 5vw, 44px); }
-.current-main { display: flex; gap: 30px; align-items: end; justify-content: space-between; }
+.current-main { position: relative; z-index: 2; display: flex; gap: 30px; align-items: end; justify-content: space-between; }
 .current-main strong { display: block; margin-top: 16px; font-size: clamp(52px, 8vw, 82px); line-height: 0.9; }
 .temperature-row { display: flex; align-items: center; }
-.temperature-row img { width: 150px; height: 150px; object-fit: contain; filter: drop-shadow(0 10px 10px rgba(0,0,0,.15)); }
 .current-main strong small { font-size: 24px; }
 .current-main p { margin: 12px 0 0; font-size: 18px; }
+.weather-video-layer { position: absolute; z-index: 1; inset: 0; pointer-events: none; }
+.weather-video-layer video { width: 100%; height: 100%; object-fit: cover; }
+.weather-video-layer::after { position: absolute; inset: 0; content: ''; background: linear-gradient(90deg, rgba(12,38,56,.72), rgba(12,38,56,.3) 58%, rgba(12,38,56,.18)); }
 .current-metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .current-metrics div { min-width: 120px; padding: 17px; border: 1px solid rgba(255,255,255,.18); border-radius: 14px; background: rgba(255,255,255,.16); backdrop-filter: blur(8px); }
 .current-metrics span, .current-metrics strong { display: block; margin: 0; font-size: 14px; }
@@ -227,6 +248,6 @@ onMounted(() => {
 .air-quality-grid p { display: grid; gap: 6px; margin: 0; padding: 18px; border: 1px solid #dcefe6; border-radius: 14px; background: linear-gradient(145deg, #f5fcf8, #eaf7f1); }
 .air-quality-grid strong { color: #236a65; font-size: 23px; }
 .air-quality-grid small { grid-column: 1 / -1; color: #718690; }
-@media (max-width: 800px) { .forecast-grid { grid-template-columns: repeat(2, 1fr); } .current-main { align-items: stretch; flex-direction: column; } .detail-heading { align-items: flex-start; flex-direction: column; gap: 16px; } }
+@media (max-width: 800px) { .forecast-grid { grid-template-columns: repeat(2, 1fr); } .current-main { align-items: stretch; flex-direction: column; } .detail-heading { align-items: flex-start; flex-direction: column; gap: 16px; } .weather-video-layer::after { background: rgba(12,38,56,.48); } }
 @media (max-width: 520px) { .forecast-grid, .air-quality-grid, .current-metrics { grid-template-columns: 1fr; } .air-quality-grid small { grid-column: auto; } }
 </style>
