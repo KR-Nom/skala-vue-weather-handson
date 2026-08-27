@@ -1,111 +1,130 @@
-# 과제 8: 날씨 Deployment
+# SKALA Vue 날씨 Hands-on
 
-작성일: 2026-08-27 (목)
+Vue 수업에서 배운 내용을 날씨 서비스에 하나씩 추가하며 완성한 Hands-on 저장소입니다.
 
-## 작업 목적
+과제 1의 Mockup부터 시작해 Composition API, Component, Router, Pinia Store, Axios, 외부 UI Library를 적용했고 마지막에는 Vercel에 배포했습니다.
 
-과제 7에서 완성한 날씨 서비스를 배포 가능한 상태로 점검하고 Vite로 정적 파일을 만든 뒤 Vercel에 Hosting한다.
+## 실행 방법
 
-## 과제 요구사항
-
-```text
-Source Code 품질관리
-├── ESLint 오류 제거
-└── API Key를 환경변수로 분리하고 Git에서 제외
-
-Build & Deployment
-├── Vite Production Build
-└── 정적 파일을 Hosting한 후 실제 화면 확인
-```
-
-## 1. ESLint 품질 점검
-
-이 저장소에는 과제 1부터 7까지의 학습 코드가 함께 있다. 이전 학습 예제 전체가 아니라 실제 배포되는 `App.vue`, `main.js`, 과제 7 폴더를 검사 대상으로 지정했다.
+### 1. 저장소 내려받기
 
 ```bash
-npm run lint
+git clone https://github.com/KR-Nom/skala-vue-weather-handson.git
+cd skala-vue-weather-handson
 ```
 
-엄격한 비교 연산자를 사용하도록 `eqeqeq` 규칙을 추가하고, 수업에서 반응형 상태 변화를 확인하는 `console.log`는 허용했다.
+### 2. Package 설치
 
-## 2. API Key 분리
-
-OpenWeatherMap API Key는 Vue 파일에 직접 작성하지 않고 `.env`에서 읽는다.
-
-```js
-const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY
+```bash
+npm install
 ```
 
-실제 `.env`는 Git에서 제외하고 필요한 변수 이름만 `.env.example`에 기록했다.
+### 3. API Key 설정
+
+프로젝트 루트에 `.env` 파일을 만들고 발급받은 OpenWeatherMap API Key를 입력합니다.
 
 ```env
 VITE_OPENWEATHER_API_KEY=발급받은_API_KEY
 ```
 
-Vite의 `VITE_` 환경변수는 브라우저에서 API 요청을 보내기 위한 값이므로 배포 서버에도 같은 이름으로 등록한다.
+실제 `.env` 파일은 Git에 올라가지 않습니다. 필요한 변수 이름은 `.env.example`에서 확인할 수 있습니다.
 
-## 3. Vite Build
+### 4. 개발 서버 실행
 
 ```bash
+npm run dev
+```
+
+브라우저에서 `http://localhost:3000`으로 접속합니다.
+
+### 5. 품질 점검과 Build
+
+```bash
+npm run lint
 npm run build
 ```
 
-빌드가 완료되면 `dist/`에 브라우저가 읽을 수 있는 HTML, JavaScript, CSS, 이미지와 영상이 생성된다. `dist/`는 다시 만들 수 있는 산출물이므로 Git에는 올리지 않는다.
+Build가 완료되면 배포용 정적 파일이 `dist/`에 생성됩니다.
 
-## 4. Vercel 배포 설정
+## 과제 진행 과정
 
-Vue Router의 `/weather/:cityId`, `/favorites`, `/about` 주소에서 새로고침해도 `index.html`을 다시 읽도록 `vercel.json`에 Rewrite를 설정했다.
+### 1. Weather Mockup
 
-```json
-{
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
-}
-```
+`v-for`, `v-if`, `v-model`과 이벤트를 이용해 8개 도시 날씨 카드를 반복 출력하고 검색·선택 기능을 구현했습니다.
 
-Vercel 프로젝트 설정에는 다음 값을 등록한다.
+- 폴더: [`01-weather-mockup`](src/assignments/01-weather-mockup)
+- 버전: `v1.0-assignment1`
 
-```text
-Framework Preset: Vite
-Build Command: npm run build
-Output Directory: dist
-Environment Variable: VITE_OPENWEATHER_API_KEY
-```
+### 2. Weather Composition
 
-## 배포 주소
+과제 1의 화면을 유지하면서 `ref`, `computed`, `watch`, `watchEffect`를 적용하고 즐겨찾기 상태를 추가했습니다.
 
-- Production: [오늘의 날씨](https://skala-vue-weather-handson.vercel.app)
-- Hosting: Vercel
-- 배포 대상: 과제 7 날씨 UI Library 완성본
+- 폴더: [`02-weather-composition`](src/assignments/02-weather-composition)
+- 버전: `v2.0-assignment2`
 
-메인 주소와 `/weather/city_01` 상세 주소의 HTTP 응답을 확인했고, OpenWeatherMap 요청도 정상 응답하는 것을 확인했다.
+### 3. Weather Components
 
-## 프런트엔드 환경변수의 제한
+한 파일에 모여 있던 검색창, 날씨 카드, 공통 틀과 즐겨찾기 목록을 독립 Component로 분리하고 `props`, `emits`, `slot`으로 연결했습니다.
 
-`.env`를 Git에서 제외하면 저장소에 API Key가 그대로 올라가는 것은 막을 수 있다. 다만 `VITE_`로 시작하는 값은 Vue가 브라우저용 JavaScript에 포함하므로 배포된 웹에서는 완전한 비밀이 아니다. 이번 과제는 브라우저에서 OpenWeatherMap을 직접 호출하는 정적 웹 구조이므로 Vercel에는 공개 Config로 등록했다.
+- 폴더: [`03-weather-components`](src/assignments/03-weather-components)
+- 버전: `v3.0-assignment3`
 
-API Key를 완전히 숨겨야 하는 서비스라면 브라우저가 OpenWeatherMap을 직접 호출하지 않고 별도의 Backend API가 대신 요청하도록 구조를 변경해야 한다.
+### 4. Weather Router
 
-## 구현 순서
+Vue Router를 이용해 메인·상세보기·즐겨찾기·서비스 소개·Not Found 화면을 주소별 View로 나눴습니다.
 
-1. 배포 대상 코드의 ESLint와 Oxlint 오류를 확인했다.
-2. API Key가 `.env`에만 존재하는지 확인했다.
-3. `.env.example`과 Git 제외 규칙을 정리했다.
-4. Vite Build로 `dist/` 정적 파일을 생성했다.
-5. Vue Router 새로고침을 위한 Vercel Rewrite를 추가했다.
-6. Vercel 환경변수 등록 후 Production 배포를 진행했다.
+- 폴더: [`04-weather-router`](src/assignments/04-weather-router)
+- 버전: `v4.0-assignment4`
 
-## 트러블슈팅
+### 5. Weather Store
 
-### 전체 학습 폴더를 Lint하면서 제출 코드와 무관한 오류가 나온 문제
+Pinia Store로 섭씨·화씨 설정을 공통 관리하고 메인과 상세 화면에서 같은 단위 상태를 사용했습니다.
 
-저장소에는 수업 중 오류를 확인하려고 작성한 Basic 예제와 이전 과제가 함께 있었다. 전체 `src`를 검사하면 현재 배포 화면과 관계없는 예제까지 오류로 처리되므로, Lint 명령의 대상을 현재 실행 진입점과 과제 7 폴더로 제한했다.
+- 폴더: [`05-weather-store`](src/assignments/05-weather-store)
+- 버전: `v5.0-assignment5`
 
-### 로컬에서는 상세 주소가 열리지만 배포 후 새로고침하면 404가 나온 문제
+### 6. Weather Axios
 
-Vue Router는 브라우저에서 주소를 바꾸지만 Vercel 서버는 `/weather/city_01` 파일을 찾으려고 한다. 모든 요청을 `index.html`로 연결하는 Rewrite를 추가해 Router가 주소를 다시 처리하도록 했다.
+Axios로 OpenWeatherMap의 현재 날씨와 3시간 예보를 요청하고 Open-Meteo의 미세먼지·초미세먼지·AQI 정보를 추가했습니다.
 
-### 로컬에서는 날씨가 나오지만 배포 화면에서는 API 요청이 실패한 문제
+- 폴더: [`06-weather-axios`](src/assignments/06-weather-axios)
+- 버전: `v6.0-assignment6`
 
-로컬 `.env`는 Git에 올리지 않으므로 Vercel이 API Key를 알 수 없다. Vercel 프로젝트의 Environment Variables에 `VITE_OPENWEATHER_API_KEY`를 별도로 등록해야 한다.
+### 7. Weather UI Library
+
+Element Plus를 적용하고 하늘 테마, 도시 대표 사진, 날씨별 영상, 반응형 카드와 상태별 색상을 이용해 개인 날씨 대시보드로 꾸몄습니다.
+
+- 폴더: [`07-weather-ui-library`](src/assignments/07-weather-ui-library)
+- 버전: `v7.0-assignment7`
+
+### 8. Weather Deployment
+
+ESLint·Oxlint 품질 점검, 환경변수 분리, Vite Build와 Vue Router Rewrite를 적용하고 Vercel에 배포했습니다.
+
+- 폴더: [`08-weather-deployment`](src/assignments/08-weather-deployment)
+- 버전: `v8.0-assignment8`
+- 배포 URL: [https://skala-vue-weather-handson.vercel.app](https://skala-vue-weather-handson.vercel.app)
+
+## 각 과제의 자세한 기록
+
+각 과제 폴더의 `README.md`에는 다음 내용을 따로 정리했습니다.
+
+- 어떤 순서로 기능을 구현했는지
+- 과제에서 사용한 Vue 핵심 개념
+- 직접 구현하면서 발생한 문제
+- 변수명·이벤트·반응형 상태·API 응답 처리와 관련된 트러블슈팅
+- 문제의 원인과 해결 방법
+
+따라서 전체 진행 순서는 이 메인 README에서 확인하고, 자세한 구현 과정과 트러블슈팅은 각 과제 폴더의 README에서 확인할 수 있습니다.
+
+## 환경과 기술
+
+- Vue 3
+- Vite
+- Vue Router
+- Pinia
+- Axios
+- Element Plus
+- OpenWeatherMap API
+- Open-Meteo Air Quality API
+- Vercel
