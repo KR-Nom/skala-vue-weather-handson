@@ -1,7 +1,7 @@
 <script setup>
-import WeatherMockup from './assignments/01-weather-mockup/WeatherMockup.vue'
+import WeatherComposition from './assignments/02-weather-composition/WeatherComposition.vue'
 </script>
 
 <template>
-  <WeatherMockup />
+  <WeatherComposition />
 </template>
