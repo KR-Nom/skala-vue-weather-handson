@@ -1,11 +1,4 @@
 <script setup>
-/**
- * 작성자: 장현진
- * 작성일: 2026-08-24 (월)
- * 변경사항: v-for·v-if·v-model과 클릭 이벤트를 이용해 날씨 Mockup 구현
- * 프로그램 설명: 8개 도시 날씨 카드와 선택·상세보기 기능 출력
- * 실행 방법: npm run dev
- */
 import { ref } from 'vue'
 
 const weatherList = ref([
