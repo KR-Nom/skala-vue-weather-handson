@@ -8,6 +8,15 @@
   font-weight: normal;
 }
 
+body {
+  background:
+    radial-gradient(ellipse at 12% 13%, rgba(255,255,255,.9) 0 5%, transparent 13%),
+    radial-gradient(ellipse at 82% 24%, rgba(255,255,255,.72) 0 7%, transparent 17%),
+    radial-gradient(ellipse at 35% 74%, rgba(255,255,255,.58) 0 8%, transparent 20%),
+    linear-gradient(180deg, #8fd4f4 0%, #d9f1fb 48%, #eef8fc 100%);
+  background-attachment: fixed;
+}
+
 a,
 .green {
   text-decoration: none;
