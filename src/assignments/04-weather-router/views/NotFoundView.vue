@@ -1,11 +1,4 @@
 <script setup>
-/**
- * 작성자: 장현진
- * 작성일: 2026-08-26 (수)
- * 변경사항: 정의되지 않은 주소를 안내하는 Catch-all 화면 추가
- * 프로그램 설명: 존재하지 않는 페이지 안내와 메인 이동 링크 출력
- * 실행 방법: /skala-view처럼 등록되지 않은 주소로 접속
- */
 import { RouterLink } from 'vue-router'
 </script>
 
