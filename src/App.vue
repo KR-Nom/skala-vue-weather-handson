@@ -1,20 +1,22 @@
 <script setup>
 /**
  * 작성자: 장현진
- * 작성일: 2026-08-26 (수)
- * 프로그램 설명: 공통 제목과 메뉴를 보여주고 현재 경로의 View를 출력
+ * 작성일: 2026-08-27 (목)
+ * 프로그램 설명: 과제 5 메뉴와 공통 온도 단위 설정 및 현재 View를 출력
  */
 import { RouterLink, RouterView } from 'vue-router'
+import UnitToggler from './assignments/05-weather-store/components/UnitToggler.vue'
 </script>
 
 <template>
   <div class="app-shell">
     <header>
-      <h1>🌦️ 과제 4: 라우터적용</h1>
+      <h1>🌦️ 과제 5: 날씨 Store</h1>
       <nav aria-label="주요 메뉴">
         <RouterLink to="/">🌦️ 날씨 대시보드</RouterLink>
         <RouterLink to="/favorites">⭐ 즐겨찾기 도시</RouterLink>
         <RouterLink to="/about">ℹ️ 서비스 소개</RouterLink>
+        <UnitToggler />
       </nav>
     </header>
 
