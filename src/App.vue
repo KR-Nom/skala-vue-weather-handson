@@ -1,7 +1,7 @@
 <script setup>
-import WeatherComposition from './assignments/02-weather-composition/WeatherComposition.vue'
+import WeatherParent from './assignments/03-weather-components/components/WeatherParent.vue'
 </script>
 
 <template>
-  <WeatherComposition />
+  <WeatherParent />
 </template>
